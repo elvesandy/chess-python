@@ -1,4 +1,3 @@
-from pygame.constants import GL_ACCUM_GREEN_SIZE
 import pygame.event
 import pygame.display
 import pygame.draw
@@ -11,10 +10,8 @@ class Piece:
         self.colour = colour
         self.type = type
         self.image = image
-        ### for later use ###
         self.enpassant = False #-1 for left, +1 for right
-        self.castle = False
-        self.promote = False
+        self.castle = False #set to false after moving or castling
         self.check = False
 
 #Create all pieces and board for game logic
@@ -54,11 +51,17 @@ def create_game_board(): #return a newly set game board
     board[7][3] = wq
     board[7][4] = wk
     #rest of the pieces
+    board[0][0].castle = True
+    board[0][7].castle = True
+    board[0][4].castle = True
+    board[7][0].castle = True
+    board[7][7].castle = True
+    board[7][4].castle = True
     return board
 
 
 
-def isValid(selected_piece, target):
+def is_valid(selected_piece, target):
     '''
     input: tuple (class Piece, int, int), (int, int); target is in i-j coordinates
     returns: bool
@@ -70,127 +73,286 @@ def isValid(selected_piece, target):
         return False
     s_piece, s_i, s_j = selected_piece
     t_i, t_j = target
+    t_piece = game_board[t_i][t_j]
+    if t_piece:
+        if t_piece.type == 'k':
+            return
     possible_moves = []
     if s_piece.type == 'p':
-        possible_moves = pawn_move(s_i, s_j)
-    if s_piece.type == 'b':
-        possible_moves = bishop_move(s_i, s_j)
-    if s_piece.type == 'r':
-        possible_moves = rook_move(s_i, s_j)
-    if s_piece.type == 'kn':
-        possible_moves = knight_move(s_i, s_j)
-    if s_piece.type == 'q':
-        possible_moves = queen_move(s_i, s_j)
-    if s_piece.type == 'k':
-        possible_moves = king_move(s_i, s_j)
-
+        possible_moves = pawn_move(s_piece, s_i, s_j)
+    elif s_piece.type == 'b':
+        possible_moves = bishop_move(s_piece, s_i, s_j)
+    elif s_piece.type == 'r':
+        possible_moves = rook_move(s_piece, s_i, s_j)
+    elif s_piece.type == 'kn':
+        possible_moves = knight_move(s_piece, s_i, s_j)
+    elif s_piece.type == 'q':
+        possible_moves = queen_move(s_piece, s_i, s_j)
+    elif s_piece.type == 'k':
+        possible_moves = king_move(s_piece, s_i, s_j)
     ##use move pattern to determine possible squares
     ##account for piece collisions and early path endings
-    
     ##account for piece capture, check, checkmate, castling, promoting, en passant
 
+    #castle condition
+    ## must be king and rooks first move
+    ## king cannot move through check / into check
+    ## king cannot castle while under attack
 
-    # for i in range(8):
-    #     for j in range(8):
-    #         if game_board[i][j]:
-    #             print(game_board[i][j].type, end=' ')
-    #         else: 
-    #             print('', end=' ')
-    #     print('')
-
-    
+    print(possible_moves)
     if target in possible_moves:
-
-        #pawn. en passant and promotion
-        if s_piece.type == 'p':
-
-            #en passant (initate take on valid pieces)
-            if s_piece.enpassant:
-                if (t_j - s_j) == s_piece.enpassant:
-                    if s_piece.colour == 'b': game_board[4][t_j] = None
-                    elif s_piece.colour == 'w': game_board[3][t_j] = None
-            #en passant (set for future pieces)
-            #-1 for left, +1 for right
-        
-            if s_piece.colour == 'b' and s_i == 1 and t_i == 3:
-                if t_j > 0:
-                    enemy = game_board[3][t_j-1]
-                    if enemy:
-                        if enemy.colour == 'w' and enemy.type == 'p':
-                            enemy.enpassant = +1  
-                if t_j < 8:
-                    enemy = game_board[3][t_j+1]
-                    if enemy:
-                        if enemy.colour == 'w' and enemy.type == 'p':
-                            enemy.enpassant = -1
-            if s_piece.colour == 'w' and s_i == 6 and t_i == 4:
-                if t_j > 0:
-                    enemy = game_board[4][t_j-1]
-                    if enemy:
-                        if enemy.colour == 'b' and enemy.type == 'p':
-                            enemy.enpassant = +1
-                if t_j < 8:
-                    enemy = game_board[4][t_j+1]
-                    if enemy:
-                        if enemy.colour == 'b' and enemy.type == 'p':
-                            enemy.enpassant = -1            
         return True
     return False
 
-def pawn_move(i, j):
+def move_piece(selected_piece, target):
+    s_piece, s_i, s_j = selected_piece
+    t_i, t_j = target
+    t_piece = game_board[t_i][t_j]
+    move = True
+    #pawn. en passant and promotion
+    if s_piece.type == 'p':
+        #en passant (initate take on valid pieces)
+        if s_piece.enpassant:
+            if (t_j - s_j) == s_piece.enpassant:
+                if s_piece.colour == 'b': game_board[4][t_j] = None
+                elif s_piece.colour == 'w': game_board[3][t_j] = None
+        #en passant (set for future pieces)
+        #-1 for left, +1 for right
+        if s_piece.colour == 'b' and s_i == 1 and t_i == 3:
+            if t_j > 0:
+                enemy = game_board[3][t_j-1]
+                if enemy:
+                    if enemy.colour == 'w' and enemy.type == 'p':
+                        enemy.enpassant = +1  
+            if t_j < 7:
+                enemy = game_board[3][t_j+1]
+                if enemy:
+                    if enemy.colour == 'w' and enemy.type == 'p':
+                        enemy.enpassant = -1
+        if s_piece.colour == 'w' and s_i == 6 and t_i == 4:
+            if t_j > 0:
+                enemy = game_board[4][t_j-1]
+                if enemy:
+                    if enemy.colour == 'b' and enemy.type == 'p':
+                        enemy.enpassant = +1
+            if t_j < 7:
+                enemy = game_board[4][t_j+1]
+                if enemy:
+                    if enemy.colour == 'b' and enemy.type == 'p':
+                        enemy.enpassant = -1   
+    ##castling
+    elif s_piece.type == 'k':
+            if s_piece.castle: 
+                #kingside castle king into rook
+                if (t_i, t_j) == (7,6): 
+                    game_board[t_i][t_j] = s_piece
+                    game_board[7][5] = game_board [7][7]
+                    game_board[7][7] = None
+                    game_board[7][5].castle == False
+                elif (t_i, t_j) == (0,6): 
+                    game_board[t_i][t_j] = s_piece
+                    game_board[0][5] = game_board [0][7]
+                    game_board[0][7] = None
+                    game_board[0][5].castle == False
+                #queenside castle king into rook
+                elif (t_i, t_j) == (7,2): 
+                    game_board[t_i][t_j] = s_piece
+                    game_board[7][3] = game_board [7][0]
+                    game_board[7][0] = None
+                    game_board[7][3].castle == False
+                elif (t_i, t_j) == (0,2): 
+                    game_board[t_i][t_j] = s_piece
+                    game_board[0][3] = game_board [0][0]
+                    game_board[0][0] = None
+                    game_board[0][3].castle == False
+    s_piece.castle == False
+    if move:
+        game_board[t_i][t_j] = s_piece
+        game_board[s_i][s_j] = None
+    return 
+
+
+def pawn_move(piece, i, j):
     moves = []
-    piece = game_board[i][j]
-    if i < 8 and i > 0:
+    if i < 7 and i > 0:
         if piece.colour == 'b':
             infront = game_board[i+1][j]
             if infront is None:
                 if i == 1: moves.append((3, j))
                 moves.append((i+1, j))
-            elif infront.colour == 'w' and infront.type is not 'k':
+            elif infront.colour == 'w' and infront.type != 'k':
                 if i == 1: moves.append((3, j))
                 moves.append((i+1, j))
             if piece.enpassant:
                 moves.append((i+1, j+piece.enpassant))
+            ##taking pieces diagonally 
+            if j > 0 and j < 7:
+                leftside = game_board[i+1][j+1]
+                rightside = game_board[i+1][j-1]
+                if leftside:
+                    if leftside.colour == 'w' and leftside.type != 'k':
+                        moves.append((i+1,j+1))
+                if rightside:
+                    if rightside.colour == 'w' and rightside.type != 'k':
+                        moves.append((i+1,j-1))
         elif piece.colour == 'w':
             infront = game_board[i-1][j]
             if infront is None:
                 if i == 6: moves.append((4, j))
                 moves.append((i-1, j))
-            elif infront.colour == 'b' and infront.type is not 'k':
+            elif infront.colour == 'b' and infront.type != 'k':
                 if i == 6: moves.append((4, j))
                 moves.append((i-1, j))
             if piece.enpassant:
-                moves.append((i-1, j+piece.enpassant))
+                moves.append((i-1, j+piece.enpassant))                
+            if j > 0 and j < 7:
+                leftside = game_board[i-1][j-1]
+                rightside = game_board[i-1][j+1]
+                if leftside:
+                    if leftside.colour == 'b' and leftside.type != 'k':
+                        moves.append((i-1,j-1))
+                if rightside:
+                    if rightside.colour == 'b' and rightside.type != 'k':
+                        moves.append((i-1,j+1))
     return moves
 
-def bishop_move(i, j):
+def bishop_move(piece, i, j):
     moves = []
-    k, l = 1, 1
-    while (i+k) <8 and (j+l) <8:
-        moves.append(i+k,j+l)
-        k+=1
-        l+=1
+    # visual of directions
+    #   3       4
+    #       b
+    #   2       1
+    #direction 1
+    for k in range(1, 8):
+        if 0 <= i+k < 8 and 0 <= j+k < 8:
+            target = game_board[i+k][j+k]
+            if not target:
+                moves.append((i+k,j+k)) 
+            elif target.colour != piece.colour:
+                moves.append((i+k,j+k))
+                break
+            elif target.colour == piece.colour:
+                break
+    #direction 2
+    for k in range(1, 8):
+        if 0 <= i+k < 8 and 0 <= j-k < 8:
+            target = game_board[i+k][j-k]
+            if not target:
+                moves.append((i+k,j-k)) 
+            elif target.colour != piece.colour:
+                moves.append((i+k,j-k))
+                break
+            elif target.colour == piece.colour :
+                break
+    #direction 3
+    for k in range(1, 8):
+        if 0 <= i-k < 8 and 0 <= j-k < 8:
+            target = game_board[i-k][j-k]
+            if not target:
+                moves.append((i-k,j-k)) 
+            elif target.colour != piece.colour:
+                moves.append((i-k,j-k))
+                break
+            elif target.colour == piece.colour :
+                break    
+    #direction 4
+    for k in range(1, 8):
+        if 0 <= i-k < 8 and 0 <= j+k < 8:
+            target = game_board[i-k][j+k]
+            if not target:
+                moves.append((i-k,j+k)) 
+            elif target.colour != piece.colour:
+                moves.append((i-k,j+k))
+                break
+            elif target.colour == piece.colour :
+                break    
+    return moves
+
+def rook_move(piece, i, j):
+    moves = []
+    #direction 1 (down)
+    for k in range(1, 8):
+        if 0 <= i+k < 8:
+            target = game_board[i+k][j]
+            if not target:
+                moves.append((i+k,j)) 
+            elif target.colour != piece.colour:
+                moves.append((i+k,j))
+                break
+            elif target.colour == piece.colour:
+                break
+    # #direction 2 (up)
+    for k in range(1, 8):
+        if 0 <= i-k < 8:
+            target = game_board[i-k][j]
+            if not target:
+                moves.append((i-k,j)) 
+            elif target.colour != piece.colour:
+                moves.append((i-k,j))
+                break
+            elif target.colour == piece.colour :
+                break    
+    # #direction 3 (right)
+    for k in range(1, 8):
+        if 0 <= j+k < 8:
+            target = game_board[i][j+k]
+            if not target:
+                moves.append((i,j+k)) 
+            elif target.colour != piece.colour:
+                moves.append((i,j+k))
+                break
+            elif target.colour == piece.colour :
+                break   
+    # #direction 4 (left)
+    for k in range(1, 8):
+        if 0 <= j-k < 8:
+            target = game_board[i][j-k]
+            if not target:
+                moves.append((i,j-k)) 
+            elif target.colour != piece.colour:
+                moves.append((i,j-k))
+                break
+            elif target.colour == piece.colour :
+                break    
     
     return moves
 
-def rook_move(i, j):
+def knight_move(piece, i, j):
     moves = []
-
+    possible = [(i+2, j+1), (i+2, j-1), (i-2, j+1), (i-2, j-1), (i+1, j+2), (i-1, j+2), (i+1, j-2), (i-1, j-2)]
+    for k in  possible:
+        if 0<=k[0]<=7 and 0<=k[1]<=7:
+            target = game_board[k[0]][k[1]]
+            if not target:
+                moves.append(k)
+            elif target.colour != piece.colour:
+                moves.append(k)
     return moves
 
-def knight_move(i, j):
+def queen_move(piece, i, j):
     moves = []
-
-    return moves
-
-def queen_move(i, j):
-    moves = []
-
+    moves.extend(rook_move(piece, i, j))
+    moves.extend(bishop_move(piece, i, j))
     return moves
     
-def king_move(i, j):
+def king_move(piece, i, j):
     moves = []
-
+    possible = [(i+k, j+l) for k in range(-1,2) for l in range(-1,2)]
+    possible.remove((i,j))
+    for k in  possible:
+        if 0<=k[0]<=7 and 0<=k[1]<=7:
+            target = game_board[k[0]][k[1]]
+            if not target:
+                moves.append(k)
+            elif target.colour != piece.colour:
+                moves.append(k)
+    if piece.castle == True: 
+        if piece.colour == 'b':
+            moves.append((7,2))  
+            moves.append((7,6))  
+        if piece.colour == 'w':
+            moves.append((0,2))  
+            moves.append((0,6))  
     return moves
 
 
@@ -240,7 +402,6 @@ def make_board(rows, cols, board_width):
             board[i].append(node)
     return(board)
 
-
 def update_display(screen, board, rows, width):
     for row in board:
         for node in row:
@@ -265,11 +426,10 @@ def get_square_under_mouse(display_board):
 
 TILESIZE = WIDTH//8
 
-
 def draw_drag(screen, display_board, selected_piece):
     '''
-copied online. doesnt exactly work LOL
-investigate the screen.blit function and how to get accurate drag and drop
+    copied online. doesnt exactly work LOL
+    investigate the screen.blit function and how to get accurate drag and drop
     '''
     if selected_piece:
         piece, i, j = get_square_under_mouse(display_board)
@@ -304,22 +464,22 @@ def main(screen):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if piece != None:
                     selected_piece = piece, i, j
-                    print(i, j)
+                    # print(i, j)
                     print(display_board[i][j].piece.type)
                     print(display_board[i][j].row, display_board[i][j].col)
+                    print(game_board[i][j].castle)
                     c, a, b = selected_piece
                     display_board[a][b].hide()
             if event.type == pygame.MOUSEBUTTONUP:
-                check = isValid(selected_piece, drop_pos)
+                check = is_valid(selected_piece, drop_pos)
                 if check:
+                    move_piece(selected_piece, drop_pos)
                     #remove below lines once isValid implemented
-                    piece, old_i, old_j = selected_piece
-                    game_board[old_i][old_j] = None
-                    new_i, new_j = drop_pos
-                    game_board[new_i][new_j] = piece
-                    # selected_piece = None
-                    # drop_pos = None
-                display_board[a][b].unhide()
+                    # piece, old_i, old_j = selected_piece
+                    # game_board[old_i][old_j] = None
+                    # new_i, new_j = drop_pos
+                    # game_board[new_i][new_j] = piece
+                if selected_piece: display_board[a][b].unhide()
                 selected_piece = None
                 drop_pos = None
             update_display(screen, display_board, 8, WIDTH)
