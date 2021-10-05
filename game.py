@@ -61,11 +61,11 @@ def create_game_board(): #return a newly set game board
 
 
 
-def is_valid(selected_piece, target):
+def is_valid(selected_piece, target, current_colour):
     '''
     input: tuple (class Piece, int, int), (int, int); target is in i-j coordinates
     returns: bool
-    Checks if a move is valid and executes it if it is
+    Checks if a move is valid and returns True if it is
     '''
     ## doesn't run if no piece is selected
     ## avoids crash on empty space click
@@ -74,9 +74,14 @@ def is_valid(selected_piece, target):
     s_piece, s_i, s_j = selected_piece
     t_i, t_j = target
     t_piece = game_board[t_i][t_j]
-    if t_piece:
-        if t_piece.type == 'k':
-            return
+    if s_piece.colour != current_colour: 
+        return
+
+    check = check_check(current_colour)
+    if check:
+        if s_piece.type != 'k':
+            return False
+
     possible_moves = []
     if s_piece.type == 'p':
         possible_moves = pawn_move(s_piece, s_i, s_j)
@@ -90,18 +95,29 @@ def is_valid(selected_piece, target):
         possible_moves = queen_move(s_piece, s_i, s_j)
     elif s_piece.type == 'k':
         possible_moves = king_move(s_piece, s_i, s_j)
+    
+    if t_piece:
+        if t_piece.type == 'k':
+            return
     ##use move pattern to determine possible squares
-    ##account for piece collisions and early path endings
     ##account for piece capture, check, checkmate, castling, promoting, en passant
 
     #castle condition
-    ## must be king and rooks first move
-    ## king cannot move through check / into check
-    ## king cannot castle while under attack
-
+    ## 1. must be king and rooks first move
+    ## 2. king cannot move through check / into check
+    ## 3. king cannot castle while under attack
+    
+    if s_piece == 'k' and not check:
+        #get square
+        print("do stuff")
     print(possible_moves)
     if target in possible_moves:
         return True
+    return False
+
+def check_check(current_colour):
+    #check whether king is in check
+    answer = True
     return False
 
 def move_piece(selected_piece, target):
@@ -148,24 +164,24 @@ def move_piece(selected_piece, target):
                     game_board[t_i][t_j] = s_piece
                     game_board[7][5] = game_board [7][7]
                     game_board[7][7] = None
-                    game_board[7][5].castle == False
+                    game_board[7][5].castle = False
                 elif (t_i, t_j) == (0,6): 
                     game_board[t_i][t_j] = s_piece
                     game_board[0][5] = game_board [0][7]
                     game_board[0][7] = None
-                    game_board[0][5].castle == False
+                    game_board[0][5].castle = False
                 #queenside castle king into rook
                 elif (t_i, t_j) == (7,2): 
                     game_board[t_i][t_j] = s_piece
                     game_board[7][3] = game_board [7][0]
                     game_board[7][0] = None
-                    game_board[7][3].castle == False
+                    game_board[7][3].castle = False
                 elif (t_i, t_j) == (0,2): 
                     game_board[t_i][t_j] = s_piece
                     game_board[0][3] = game_board [0][0]
                     game_board[0][0] = None
-                    game_board[0][3].castle == False
-    s_piece.castle == False
+                    game_board[0][3].castle = False
+    s_piece.castle = False
     if move:
         game_board[t_i][t_j] = s_piece
         game_board[s_i][s_j] = None
@@ -178,9 +194,6 @@ def pawn_move(piece, i, j):
         if piece.colour == 'b':
             infront = game_board[i+1][j]
             if infront is None:
-                if i == 1: moves.append((3, j))
-                moves.append((i+1, j))
-            elif infront.colour == 'w' and infront.type != 'k':
                 if i == 1: moves.append((3, j))
                 moves.append((i+1, j))
             if piece.enpassant:
@@ -198,9 +211,6 @@ def pawn_move(piece, i, j):
         elif piece.colour == 'w':
             infront = game_board[i-1][j]
             if infront is None:
-                if i == 6: moves.append((4, j))
-                moves.append((i-1, j))
-            elif infront.colour == 'b' and infront.type != 'k':
                 if i == 6: moves.append((4, j))
                 moves.append((i-1, j))
             if piece.enpassant:
@@ -339,7 +349,7 @@ def king_move(piece, i, j):
     moves = []
     possible = [(i+k, j+l) for k in range(-1,2) for l in range(-1,2)]
     possible.remove((i,j))
-    for k in  possible:
+    for k in possible:
         if 0<=k[0]<=7 and 0<=k[1]<=7:
             target = game_board[k[0]][k[1]]
             if not target:
@@ -347,10 +357,10 @@ def king_move(piece, i, j):
             elif target.colour != piece.colour:
                 moves.append(k)
     if piece.castle == True: 
-        if piece.colour == 'b':
+        if piece.colour == 'w':
             moves.append((7,2))  
             moves.append((7,6))  
-        if piece.colour == 'w':
+        if piece.colour == 'b':
             moves.append((0,2))  
             moves.append((0,6))  
     return moves
@@ -454,6 +464,8 @@ def main(screen):
     clock = pygame.time.Clock()
     selected_piece = None
     drop_pos = None
+    players = ['w', 'b'] 
+    current_player = 0
     while True:
         piece, i, j = get_square_under_mouse(display_board)
         # if piece:
@@ -471,9 +483,10 @@ def main(screen):
                     c, a, b = selected_piece
                     display_board[a][b].hide()
             if event.type == pygame.MOUSEBUTTONUP:
-                check = is_valid(selected_piece, drop_pos)
+                check = is_valid(selected_piece, drop_pos , players[current_player])
                 if check:
                     move_piece(selected_piece, drop_pos)
+                    current_player = (current_player + 1) % 2
                     #remove below lines once isValid implemented
                     # piece, old_i, old_j = selected_piece
                     # game_board[old_i][old_j] = None
