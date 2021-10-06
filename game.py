@@ -15,18 +15,18 @@ class Piece:
         self.check = False
 
 #Create all pieces and board for game logic
-bp = Piece('b', 'p', 'b_pawn.png')
-wp = Piece('w', 'p', 'w_pawn.png')
-bk = Piece('b', 'k', 'b_king.png')
-wk = Piece('w', 'k', 'w_king.png')
-br = Piece('b', 'r', 'b_rook.png')
-wr = Piece('w', 'r', 'w_rook.png')
-bb = Piece('b', 'b', 'b_bishop.png')
-wb = Piece('w', 'b', 'w_bishop.png')
-bq = Piece('b', 'q', 'b_queen.png')
-wq = Piece('w', 'q', 'w_queen.png')
-bkn = Piece('b', 'kn', 'b_knight.png')
-wkn = Piece('w', 'kn', 'w_knight.png')
+bp = Piece('b', 'p', './b_pawn.png')
+wp = Piece('w', 'p', './w_pawn.png')
+bk = Piece('b', 'k', './b_king.png')
+wk = Piece('w', 'k', './w_king.png')
+br = Piece('b', 'r', './b_rook.png')
+wr = Piece('w', 'r', './w_rook.png')
+bb = Piece('b', 'b', './b_bishop.png')
+wb = Piece('w', 'b', './w_bishop.png')
+bq = Piece('b', 'q', './b_queen.png')
+wq = Piece('w', 'q', './w_queen.png')
+bkn = Piece('b', 'kn', './b_knight.png')
+wkn = Piece('w', 'kn', './w_knight.png')
 
 def create_game_board(): #return a newly set game board
     board = [[None for j in range(8)] for i in range(8)] #define an 8x8 array of values 0
