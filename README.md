@@ -4,5 +4,5 @@
 # Personal Project by Andrew Gorga
 # 
 # Chess with an interactive click-and-drag gui
-# Packages: pygame
+# Packages: pygame, copy
 # 
