@@ -66,13 +66,12 @@ def is_valid(game_board, selected_piece, target, current_colour, king_locations)
     '''
     input: tuple (class Piece, int, int), tuple (int, int), char; 
     returns: bool
+
     Checks if a move is valid and returns True if it is
     target is in i-j coordinates
+    use move pattern to determine possible squares
+    account for piece capture, check, checkmate, castling, promoting, en passant
     '''
-    ##use move pattern to determine possible squares
-    ##account for piece capture, check, checkmate, castling, promoting, en passant
-
-    ## doesn't run if no piece is selected
     ## avoids crash on empty space click
     if not target: 
         return False
@@ -99,9 +98,11 @@ def is_valid(game_board, selected_piece, target, current_colour, king_locations)
     
 
 def simulate_move(board, selected_piece, target, current_colour, king_locations):
-    #checks whether moving a piece to a location will put the same colour king into check
-    #returns TRUE if king is still in check after moving
-    #        FALSE if king no longer in check
+    '''
+    checks whether moving a piece to a location will put the same colour king into check
+    returns TRUE if king is still in check after moving
+            FALSE if king no longer in check
+    '''
     board_copy = copy.deepcopy(board)
     king_locations_copy = copy.deepcopy(king_locations)
     select_copy = copy.deepcopy(selected_piece)
@@ -109,8 +110,6 @@ def simulate_move(board, selected_piece, target, current_colour, king_locations)
     move_piece(board_copy, select_copy, target_copy, king_locations_copy)  
     update_check(board_copy, king_locations_copy)
     current_king_location = king_locations_copy[current_colour + 'k']
-    # i , j = current_king_location
-    # print(board[i][j].attackable)
     return check_check(board_copy, current_king_location)
 
 def get_moves(board, s_piece, s_i, s_j):
@@ -163,7 +162,7 @@ def check_checkmate(board, king_locations, current_colour):
     current_king_location = king_locations[current_colour + 'k']
     #checks if the player is first in check
     if not check_check(board, current_king_location): return False
-    
+
     #loop through all of players pieces
     for i in range(8):
         for j in range(8):
@@ -269,7 +268,7 @@ def pawn_move(board, piece, i, j):
                 moves.append((i+1, j))
             if piece.enpassant:
                 moves.append((i+1, j+piece.enpassant))
-            ##taking pieces diagonally 
+            #taking pieces diagonally 
             if j > 0:
                 rightside = board[i+1][j-1]
                 if rightside:
@@ -288,7 +287,7 @@ def pawn_move(board, piece, i, j):
                 moves.append((i-1, j))
             if piece.enpassant:
                 moves.append((i-1, j+piece.enpassant))    
-            ##taking pieces diagonally 
+            #taking pieces diagonally 
             if j < 7:
                 rightside = board[i-1][j+1]
                 if rightside:
@@ -299,7 +298,6 @@ def pawn_move(board, piece, i, j):
                 if leftside:
                     if leftside.colour == 'b':
                         moves.append((i-1,j-1))
-            
     return moves
 
 def bishop_move(board, piece, i, j):
@@ -400,7 +398,6 @@ def rook_move(board, piece, i, j):
                 break
             elif target.colour == piece.colour :
                 break    
-    
     return moves
 
 def knight_move(board, piece, i, j):
@@ -505,6 +502,7 @@ HEIGHT = 800
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Chess")
 BOARD_POS = (10, 10)
+TILESIZE = WIDTH//8
 
 def get_square_under_mouse(display_board, game_board): 
     mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
@@ -513,8 +511,6 @@ def get_square_under_mouse(display_board, game_board):
         if i >= 0 and j >= 0: return (game_board[i][j], i, j)
     except IndexError: pass
     return None, None, None
-
-TILESIZE = WIDTH//8
 
 def draw_drag(screen, display_board, selected_piece):
     '''
@@ -557,20 +553,12 @@ def main(screen):
     line = ''
     while True:
         piece, i, j = get_square_under_mouse(display_board, game_board)
-        # if piece:
-        #     print(piece.type, i, j)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if piece != None:
                     selected_piece = piece, i, j
-                    # print(i, j)
-                    # print(display_board[i][j].piece.type)
-                    # print(display_board[i][j].row, display_board[i][j].col)
-                    # print(game_board[i][j].castle)
-                    # print("black king at: ", piece_locations[bk])
-                    # print("white king at: ", piece_locations[wk])
                     c, a, b = selected_piece
                     display_board[a][b].hide()
             if event.type == pygame.MOUSEBUTTONUP:
@@ -587,13 +575,6 @@ def main(screen):
                         else: 
                             line = "WHITE WINS"
                         print(line)
-                        
-
-                    #remove below lines once isValid implemented
-                    # piece, old_i, old_j = selected_piece
-                    # game_board[old_i][old_j] = None
-                    # new_i, new_j = drop_pos
-                    # game_board[new_i][new_j] = piece
                 if selected_piece: display_board[a][b].unhide()
                 selected_piece = None
                 drop_pos = None
@@ -602,5 +583,6 @@ def main(screen):
             message_display(screen, line)
             pygame.display.flip()
             clock.tick(60)
+
 if __name__ == '__main__':
     main(screen)
